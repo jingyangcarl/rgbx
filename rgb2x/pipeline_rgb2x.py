@@ -796,6 +796,7 @@ class StableDiffusionAOVMatEstPipeline(
                         callback(i, t, latents)
 
             aov_latents = latents / self.vae.config.scaling_factor
+            aov_latents = aov_latents.to(self.vae.dtype) # to avoid 
             aov = self.vae.decode(aov_latents, return_dict=False)[0]
             do_denormalize = [True] * aov.shape[0]
             aov_name = required_aovs[0]

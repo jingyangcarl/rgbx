@@ -8,3 +8,6 @@ git clone https://huggingface.co/zheng95z/rgb-to-x
 pip install accelerate scipy imageio[ffmpeg] opencv-python
 
 python rgb2x/gradio_demo_rgb2x.py
+
+# init by lotus
+pip install scipy easydict
