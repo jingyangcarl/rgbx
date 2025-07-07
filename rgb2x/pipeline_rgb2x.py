@@ -808,6 +808,11 @@ class StableDiffusionAOVMatEstPipeline(
             if aov_name == "roughness" or aov_name == "metallic":
                 aov = aov[:, 0:1].repeat(1, 3, 1, 1)
 
+            if aov_name == 'normal':
+                # negate the x channel to match the convention used in lotus
+                # note that the negate also need to be conducted during the fintuning to match the lotus convention
+                aov[:, 0, :, :] = -aov[:, 0, :, :]
+
             aov = self.image_processor.postprocess(
                 aov,
                 output_type=output_type,
