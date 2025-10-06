@@ -801,7 +801,8 @@ class StableDiffusionAOVMatEstPipeline(
             do_denormalize = [True] * aov.shape[0]
             aov_name = required_aovs[0]
             if aov_name == "albedo" or aov_name == "irradiance":
-                do_gamma_correction = True
+                # do_gamma_correction = True
+                do_gamma_correction = False
             else:
                 do_gamma_correction = False
 

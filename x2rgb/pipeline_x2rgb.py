@@ -15,7 +15,8 @@ from diffusers.pipelines.stable_diffusion.pipeline_stable_diffusion import (
     rescale_noise_cfg,
 )
 from diffusers.schedulers import KarrasDiffusionSchedulers
-from diffusers.utils import CONFIG_NAME, BaseOutput, deprecate, logging, randn_tensor
+from diffusers.utils import CONFIG_NAME, BaseOutput, deprecate, logging
+from diffusers.utils.torch_utils import randn_tensor
 from packaging import version
 from transformers import CLIPTextModel, CLIPTokenizer
 
@@ -824,6 +825,9 @@ class StableDiffusionAOVDropoutPipeline(
                         image_latent = torch.cat(
                             [image_latent, image_latent, uncond_image_latent], dim=0
                         )
+                        
+                    # hack to black out everything
+                    # image_latent = torch.zeros_like(image_latent) if aov.mean() < -1 + 1e-3 else image_latent
                 else:
                     scaling_factor = scaling_factors[aov_name]
                     image_latent = (
@@ -836,8 +840,14 @@ class StableDiffusionAOVDropoutPipeline(
                             do_classifier_free_guidance,
                             generator,
                         )
-                        * scaling_factor
+                        # * scaling_factor
+                        * self.vae.config.scaling_factor # align with default vae scaling
                     )
+                    
+                    # hack to enable only albedo and normal at inference time
+                    if aov_name not in ["albedo"]:
+                        image_latent = torch.zeros_like(image_latent)
+                    
                 image_latents.append(image_latent)
         image_latents = torch.cat(image_latents, dim=1)
 
@@ -922,8 +932,9 @@ class StableDiffusionAOVDropoutPipeline(
                         callback(i, t, latents)
 
         if not output_type == "latent":
+            
             image = self.vae.decode(
-                latents / self.vae.config.scaling_factor, return_dict=False
+                (latents / self.vae.config.scaling_factor).to(self.vae.dtype), return_dict=False
             )[0]
 
             if return_predicted_x0s:
@@ -940,7 +951,7 @@ class StableDiffusionAOVDropoutPipeline(
         do_denormalize = [True] * image.shape[0]
 
         image = self.image_processor.postprocess(
-            image, output_type=output_type, do_denormalize=do_denormalize
+            image, output_type=output_type, do_denormalize=do_denormalize, do_gamma_correction=False
         )
 
         if return_predicted_x0s:
